@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.utils import IntegrityError
+
 
 # Create your models here.
 
@@ -13,10 +15,39 @@ class Bb(models.Model):
     class Meta:
         verbose_name_plural = 'Объявления'
         verbose_name = 'Объявление'
-        ordering = ['-published']
+        ordering = ['-published', 'title']
+
+        # fields mast have unique value
+        unique_together = (
+            ('title', 'published'),
+            ('title', 'price', 'rubric'),
+             )
+
+        # get latest version (get_early_by - early)
+        get_latest_by = 'published'
+
+        # create index with only product less 10000
+        indexes = [
+            models.Index(fields=['-published', 'title'],
+                         name='bb_partial',
+                         condition=models.Q(price__lte=10000))
+        ]
+
+        # create index with many fields
+        index_together = [['published', 'title'],
+                          ['title', 'price', 'rubric'],
+                          ]
+
+        try:
+            constraints = (
+                models.CheckConstraint(check=models.Q(price__gte=0) & models.Q(price__lte=60000000),
+                                       name='bboard_rubric_price_constraint'),
+            )
+        except IntegrityError:
+            print('Value Error')
 
 
-class Rubric (models .Model):
+class Rubric(models.Model):
     name = models.CharField(max_length=20, db_index=True, verbose_name='Название')
 
     def __str__(self):
