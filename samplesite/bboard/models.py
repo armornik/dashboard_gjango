@@ -1,12 +1,17 @@
 from django.db import models
 from django.db.utils import IntegrityError
+from django.core import validators
+from django.core.exceptions import ValidationError
 
 
 # Create your models here.
 
 
 class Bb(models.Model):
-    title = models.CharField(max_length=50, verbose_name='Товар')
+    title = models.CharField(max_length=50, verbose_name='Товар',
+                             validators=[validators.MinLengthValidator(1, message='Very small length'),
+                                         validators.MaxLengthValidator(51, message='Very big length')],
+                             error_messages={'invalid': 'Неправильное название товара'})
     content = models.TextField(null=True, blank=True, verbose_name='Описание')
     price = models.FloatField(null=True, blank=True, verbose_name='Цена')
     published = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='Опубликовано')
@@ -45,6 +50,18 @@ class Bb(models.Model):
             )
         except IntegrityError:
             print('Value Error')
+
+    def clean(self):
+        """Check content and price > 0"""
+        errors = {}
+        if not self.content:
+            errors['content'] = ValidationError('Enter a description of the item being sold')
+
+        if self.price and self.price < 0:
+            errors['price'] = ValidationError('Specify a non-negative price value')
+
+        if errors:
+            raise ValidationError(errors)
 
 
 class Rubric(models.Model):
